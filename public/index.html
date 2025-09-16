@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Multi-Framework API Generator with AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #authFields {
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 2px solid #007bff;
+        }
+
+        .example {
+            font-size: 12px;
+            color: #666;
+            margin-top: -5px;
+        }
+
+        .schema-section {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .field-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .field-row input {
+            flex: 1;
+        }
+
+        .field-row select {
+            width: 150px;
+        }
+
+        .field-row button {
+            width: auto;
+            padding: 5px 10px;
+            background: #dc3545;
+        }
+
+        .field-row button:hover {
+            background: #c82333;
+        }
+
+        #schemaPreview {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #loading span {
+            font-size: 16px;
+            color: #007bff;
+        }
+
+        #aiInput {
+            height: 100px;
+            resize: vertical;
+        }
+
+        #aiParseBtn {
+            width: auto;
+            background: #28a745;
+        }
+
+        #aiParseBtn:hover {
+            background: #218838;
+        }
+
+        .db-config-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+
+        .db-config-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        #singleFrameworkConfig,
+        #bothFrameworksConfig {
+            display: none;
+        }
+
+        /* New styles for update mode */
+        .mode-section {
+            border: 2px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: #f8fff8;
+        }
+
+        .mode-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            background: #fafafa;
+            margin: 10px 0;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
+        #updateModeConfig {
+            display: none;
+        }
+
+        .update-button {
+            background: #28a745;
+        }
+
+        .update-button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚀 Multi-Framework API Generator with AI</h1>
+    <p style="text-align: center; color: #666;">Create new projects or update existing ones with new APIs!</p>
+
+    <form id="generatorForm">
+        <!-- Mode Selection -->
+        <div class="mode-section">
+            <div class="mode-title">Generation Mode</div>
+            <label for="mode">Select Mode:</label>
+            <select id="mode" name="mode" required>
+                <option value="new">Create New Project</option>
+                <option value="update">Update Existing Project</option>
+            </select>
+        </div>
+
+        <!-- Update Mode Configuration -->
+        <div id="updateModeConfig">
+            <label for="projectUpload">Upload Your Existing Project (ZIP file):</label>
+            <div class="file-upload-area" id="fileUploadArea">
+                <input type="file" id="projectUpload" accept=".zip" style="display: none;">
+                <p>📁 Click here or drag & drop your project ZIP file</p>
+                <p class="example">Upload the ZIP file of your existing Node.js or .NET project</p>
+            </div>
+            <div id="uploadedFileName" style="margin-top: 10px; color: #28a745; font-weight: bold;"></div>
+        </div>
+
+        <label for="framework">Select Framework:</label>
+        <select id="framework" name="framework" required>
+            <option value="nodejs">Node.js + MongoDB (Express + Mongoose)</option>
+            <option value="dotnet">.NET Core + SQL Server (EF Core)</option>
+            <option value="both">Both (Separate Folders in ZIP)</option>
+        </select>
+
+        <!-- Single Framework Database Configuration -->
+        <div id="singleFrameworkConfig">
+            <label for="dbName">Database Name:</label>
+            <input type="text" id="dbName" name="dbName" value="multi_api_db" placeholder="e.g., myapp_db" required>
+            <div class="example">For Node.js: Default is fine. For .NET: e.g., API1</div>
+
+            <label for="connStr">Connection String / Server:</label>
+            <input type="text" id="connStr" name="connectionString" value="mongodb://localhost:27017"
+                placeholder="Node: mongodb://localhost:27017 | .NET: DESKTOP-03BFE9V" required>
+            <div class="example">Node.js: MongoDB URI. .NET: Server name like DESKTOP-03BFE9V</div>
+
+            <label>
+                <input type="checkbox" id="useAuth" name="useAuth"> Use Authentication?
+            </label>
+            <div id="authFields" style="display: none;">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" placeholder="DB username">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" placeholder="DB password">
+            </div>
+        </div>
+
+        <!-- Both Frameworks Database Configuration -->
+        <div id="bothFrameworksConfig">
+            <!-- Node.js Configuration -->
+            <div class="db-config-section">
+                <div class="db-config-title">📱 Node.js + MongoDB Configuration</div>
+
+                <label for="nodejsDbName">Database Name:</label>
+                <input type="text" id="nodejsDbName" name="nodejsDbName" value="multi_api_db"
+                    placeholder="e.g., myapp_db">
+
+                <label for="nodejsConnStr">MongoDB Connection String:</label>
+                <input type="text" id="nodejsConnStr" name="nodejsConnectionString" value="mongodb://localhost:27017"
+                    placeholder="mongodb://localhost:27017">
+
+                <label>
+                    <input type="checkbox" id="nodejsUseAuth" name="nodejsUseAuth"> Use Authentication?
+                </label>
+                <div id="nodejsAuthFields" style="display: none;">
+                    <label for="nodejsUsername">Username:</label>
+                    <input type="text" id="nodejsUsername" name="nodejsUsername" placeholder="MongoDB username">
+                    <label for="nodejsPassword">Password:</label>
+                    <input type="password" id="nodejsPassword" name="nodejsPassword" placeholder="MongoDB password">
+                </div>
+            </div>
+
+            <!-- .NET Configuration -->
+            <div class="db-config-section">
+                <div class="db-config-title">⚡ .NET + SQL Server Configuration</div>
+
+                <label for="dotnetDbName">Database Name:</label>
+                <input type="text" id="dotnetDbName" name="dotnetDbName" value="API1" placeholder="e.g., API1">
+
+                <label for="dotnetConnStr">SQL Server Name:</label>
+                <input type="text" id="dotnetConnStr" name="dotnetConnectionString" value="DESKTOP-03BFE9V"
+                    placeholder="DESKTOP-03BFE9V">
+
+                <label>
+                    <input type="checkbox" id="dotnetUseAuth" name="dotnetUseAuth"> Use SQL Authentication?
+                </label>
+                <div id="dotnetAuthFields" style="display: none;">
+                    <label for="dotnetUsername">Username:</label>
+                    <input type="text" id="dotnetUsername" name="dotnetUsername" placeholder="SQL Server username">
+                    <label for="dotnetPassword">Password:</label>
+                    <input type="password" id="dotnetPassword" name="dotnetPassword" placeholder="SQL Server password">
+                </div>
+            </div>
+        </div>
+
+        <label for="aiInput">Describe Your New APIs (Natural Language):</label>
+        <textarea id="aiInput"
+            placeholder="e.g., Add a Product API with title as string required and price as number"></textarea>
+        <button type="button" id="aiParseBtn">🤖 Parse with AI</button>
+        <div class="example">Describe new entities and fields to add to your project</div>
+
+        <label>Schemas (Edit or Confirm):</label>
+        <div id="schemaBuilder">
+            <!-- Entities will be added here dynamically -->
+        </div>
+        <button type="button" id="addEntityBtn">➕ Add Entity</button>
+
+        <div id="schemaPreview">
+            <strong>Schema Preview:</strong>
+            <pre id="previewContent">No schemas added yet.</pre>
+        </div>
+
+        <div id="loading">
+            <span>Processing your project... Please wait ⏳</span>
+        </div>
+
+        <button type="submit" id="submitBtn">🎉 Generate & Download ZIP</button>
+    </form>
+
+    <script>
+        // State to store entities and uploaded file
+        let entities = [];
+        let uploadedFile = null;
+
+        // Available field types
+        const fieldTypes = ['string', 'number', 'boolean', 'date', 'array'];
+
+        // Function to update schema preview
+        function updatePreview() {
+            const preview = document.getElementById('previewContent');
+            if (entities.length === 0) {
+                preview.textContent = 'No schemas added yet.';
+                return;
+            }
+            preview.textContent = JSON.stringify(entities, null, 2);
+        }
+
+        // Function to clear schema builder
+        function clearSchemaBuilder() {
+            const schemaBuilder = document.getElementById('schemaBuilder');
+            schemaBuilder.innerHTML = '';
+            entities = [];
+            updatePreview();
+        }
+
+        // Function to add a new entity
+        function addEntity(entityName = '', fields = []) {
+            const entityId = Date.now() + Math.random();
+            const entity = { entity: entityName, fields: fields.map(f => ({ ...f, id: Date.now() + Math.random() })), id: entityId };
+            entities.push(entity);
+
+            const schemaBuilder = document.getElementById('schemaBuilder');
+            const entityDiv = document.createElement('div');
+            entityDiv.className = 'schema-section';
+            entityDiv.dataset.entityId = entityId;
+
+            entityDiv.innerHTML = `
+                <label>Entity Name:</label>
+                <input type="text" class="entity-name" placeholder="e.g., Product" value="${entityName}" required>
+                <div class="fields">
+                  <strong>Fields:</strong>
+                  ${fields.map(field => `
+                    <div class="field-row" data-field-id="${field.id}">
+                      <input type="text" class="field-name" value="${field.name}" required>
+                      <select class="field-type">
+                        ${fieldTypes.map(type => `<option value="${type}" ${type === field.type ? 'selected' : ''}>${type}</option>`).join('')}
+                      </select>
+                      <label><input type="checkbox" class="field-required" ${field.required ? 'checked' : ''}> Required</label>
+                      <button type="button" class="remove-field-btn">🗑️</button>
+                    </div>
+                  `).join('')}
+                </div>
+                <button type="button" class="add-field-btn">➕ Add Field</button>
+                <button type="button" class="remove-entity-btn" style="background: #dc3545; margin-top: 10px;">🗑️ Remove Entity</button>
+            `;
+            schemaBuilder.appendChild(entityDiv);
+
+            // Event listeners for entity
+            entityDiv.querySelector('.entity-name').addEventListener('input', (e) => {
+                entity.entity = e.target.value;
+                updatePreview();
+            });
+
+            entityDiv.querySelector('.add-field-btn').addEventListener('click', () => addField(entityDiv, entity));
+            entityDiv.querySelector('.remove-entity-btn').addEventListener('click', () => {
+                entities = entities.filter(e => e.id !== entityId);
+                entityDiv.remove();
+                updatePreview();
+            });
+
+            // Add event listeners for existing fields
+            entityDiv.querySelectorAll('.field-row').forEach(row => {
+                const fieldId = row.dataset.fieldId;
+                const field = entity.fields.find(f => f.id == fieldId);
+                row.querySelector('.field-name').addEventListener('input', (e) => {
+                    field.name = e.target.value;
+                    updatePreview();
+                });
+                row.querySelector('.field-type').addEventListener('change', (e) => {
+                    field.type = e.target.value;
+                    updatePreview();
+                });
+                row.querySelector('.field-required').addEventListener('change', (e) => {
+                    field.required = e.target.checked;
+                    updatePreview();
+                });
+                row.querySelector('.remove-field-btn').addEventListener('click', () => {
+                    entity.fields = entity.fields.filter(f => f.id != fieldId);
+                    row.remove();
+                    updatePreview();
+                });
+            });
+
+            updatePreview();
+        }
+
+        // Function to add a new field to an entity
+        function addField(entityDiv, entity) {
+            const fieldId = Date.now() + Math.random();
+            const field = { name: '', type: 'string', required: false, id: fieldId };
+            entity.fields.push(field);
+
+            const fieldsContainer = entityDiv.querySelector('.fields');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.dataset.fieldId = fieldId;
+
+            fieldRow.innerHTML = `
+                <input type="text" class="field-name" placeholder="Field name, e.g., name" required>
+                <select class="field-type">
+                  ${fieldTypes.map(type => `<option value="${type}">${type}</option>`).join('')}
+                </select>
+                <label><input type="checkbox" class="field-required"> Required</label>
+                <button type="button" class="remove-field-btn">🗑️</button>
+            `;
+            fieldsContainer.appendChild(fieldRow);
+
+            fieldRow.querySelector('.field-name').addEventListener('input', (e) => {
+                field.name = e.target.value;
+                updatePreview();
+            });
+            fieldRow.querySelector('.field-type').addEventListener('change', (e) => {
+                field.type = e.target.value;
+                updatePreview();
+            });
+            fieldRow.querySelector('.field-required').addEventListener('change', (e) => {
+                field.required = e.target.checked;
+                updatePreview();
+            });
+            fieldRow.querySelector('.remove-field-btn').addEventListener('click', () => {
+                entity.fields = entity.fields.filter(f => f.id !== fieldId);
+                fieldRow.remove();
+                updatePreview();
+            });
+
+            updatePreview();
+        }
+
+        // Mode change handler
+        document.getElementById('mode').addEventListener('change', function (e) {
+            const mode = e.target.value;
+            const updateConfig = document.getElementById('updateModeConfig');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (mode === 'update') {
+                updateConfig.style.display = 'block';
+                submitBtn.textContent = '🔄 Update & Download ZIP';
+                submitBtn.className = 'update-button';
+                // Clear default entity for update mode
+                clearSchemaBuilder();
+            } else {
+                updateConfig.style.display = 'none';
+                submitBtn.textContent = '🎉 Generate & Download ZIP';
+                submitBtn.className = '';
+                // Add default entity for new mode
+                clearSchemaBuilder();
+                addEntity('User', [
+                    { name: 'name', type: 'string', required: true },
+                    { name: 'email', type: 'string', required: false }
+                ]);
+            }
+        });
+
+        // File upload handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const projectUpload = document.getElementById('projectUpload');
+        const uploadedFileName = document.getElementById('uploadedFileName');
+
+        fileUploadArea.addEventListener('click', () => projectUpload.click());
+
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        projectUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            if (!file.name.endsWith('.zip')) {
+                alert('Please upload a ZIP file only');
+                return;
+            }
+            uploadedFile = file;
+            uploadedFileName.textContent = `✅ Uploaded: ${file.name}`;
+        }
+
+        // Initialize with default entity for new mode
+        addEntity('User', [
+            { name: 'name', type: 'string', required: true },
+            { name: 'email', type: 'string', required: false }
+        ]);
+
+        // Add entity button
+        document.getElementById('addEntityBtn').addEventListener('click', () => addEntity());
+
+        // AI Parse button
+        document.getElementById('aiParseBtn').addEventListener('click', async () => {
+            const aiInput = document.getElementById('aiInput').value.trim();
+            if (!aiInput) {
+                alert('❌ Please enter a description for the AI to parse!');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const response = await fetch('/parse-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: aiInput })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'AI parsing failed');
+                }
+
+                const { schemas } = await response.json();
+                schemas.forEach(entity => addEntity(entity.entity, entity.fields));
+                document.getElementById('aiInput').value = '';
+                alert('✅ AI parsed schemas successfully! Review and edit below.');
+            } catch (error) {
+                alert('❌ AI Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Toggle auth fields for single framework
+        document.getElementById('useAuth').addEventListener('change', function (e) {
+            document.getElementById('authFields').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        // Toggle auth fields for Node.js in both framework mode
+        document.getElementById('nodejsUseAuth').addEventListener('change', function (e) {
+            document.getElementById('nodejsAuthFields').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        // Toggle auth fields for .NET in both framework mode
+        document.getElementById('dotnetUseAuth').addEventListener('change', function (e) {
+            document.getElementById('dotnetAuthFields').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        // Framework selection handler - show/hide appropriate config sections
+        document.getElementById('framework').addEventListener('change', function (e) {
+            const val = e.target.value;
+            const singleConfig = document.getElementById('singleFrameworkConfig');
+            const bothConfig = document.getElementById('bothFrameworksConfig');
+
+            if (val === 'both') {
+                singleConfig.style.display = 'none';
+                bothConfig.style.display = 'block';
+            } else {
+                singleConfig.style.display = 'block';
+                bothConfig.style.display = 'none';
+
+                // Update single framework defaults
+                const dbName = document.getElementById('dbName');
+                const connStr = document.getElementById('connStr');
+                if (val === 'dotnet') {
+                    dbName.value = 'API1';
+                    connStr.value = 'DESKTOP-03BFE9V';
+                } else {
+                    dbName.value = 'multi_api_db';
+                    connStr.value = 'mongodb://localhost:27017';
+                }
+            }
+        });
+
+        // Initialize framework display
+        document.getElementById('framework').dispatchEvent(new Event('change'));
+
+        // Form submit
+        // document.getElementById('generatorForm').addEventListener('submit', async function (e) {
+        //     e.preventDefault();
+
+        //     const mode = document.getElementById('mode').value;
+
+        //     // Validate for update mode
+        //     if (mode === 'update' && !uploadedFile) {
+        //         alert('❌ Please upload your existing project ZIP file first!');
+        //         return;
+        //     }
+
+        //     document.getElementById('loading').style.display = 'block';
+
+        //     // Validate entities
+        //     for (const entity of entities) {
+        //         if (!entity.entity.trim()) {
+        //             alert('❌ All entities must have a name!');
+        //             document.getElementById('loading').style.display = 'none';
+        //             return;
+        //         }
+        //         if (entity.fields.length === 0) {
+        //             alert(`❌ Entity "${entity.entity}" must have at least one field!`);
+        //             document.getElementById('loading').style.display = 'none';
+        //             return;
+        //         }
+        //         for (const field of entity.fields) {
+        //             if (!field.name.trim()) {
+        //                 alert(`❌ All fields in "${entity.entity}" must have a name!`);
+        //                 document.getElementById('loading').style.display = 'none';
+        //                 return;
+        //             }
+        //         }
+        //     }
+
+        //     const formData = new FormData(this);
+        //     formData.append('mode', mode);
+        //     formData.append('schemas', JSON.stringify(entities));
+
+        //     if (mode === 'update' && uploadedFile) {
+        //         formData.append('projectFile', uploadedFile);
+        //     }
+
+        //     const framework = formData.get('framework');
+
+        //     // Add framework-specific config
+        //     if (framework === 'both') {
+        //         // Both frameworks config already handled by FormData
+        //     } else {
+        //         // Single framework - add dbConfig
+        //         const useAuth = formData.get('useAuth') === 'on';
+        //         const dbConfig = {
+        //             dbName: formData.get('dbName'),
+        //             connectionString: formData.get('connectionString'),
+        //             useAuth,
+        //             ...(useAuth ? {
+        //                 username: formData.get('username'),
+        //                 password: formData.get('password')
+        //             } : {})
+        //         };
+        //         formData.append('dbConfig', JSON.stringify(dbConfig));
+        //     }
+
+        //     try {
+        //         const response = await fetch(mode === 'update' ? '/update-project' : '/generate', {
+        //             method: 'POST',
+        //             body: formData
+        //         });
+
+        //         document.getElementById('loading').style.display = 'none';
+        //         if (response.ok) {
+        //             const blob = await response.blob();
+        //             const url = window.URL.createObjectURL(blob);
+        //             const a = document.createElement('a');
+        //             a.href = url;
+        //             a.download = `api-project-${framework}-${mode}-${Date.now()}.zip`;
+        //             document.body.appendChild(a);
+        //             a.click();
+        //             document.body.removeChild(a);
+        //             window.URL.revokeObjectURL(url);
+        //             alert(`✅ ZIP downloaded! Your project has been ${mode === 'update' ? 'updated' : 'generated'}.`);
+        //         } else {
+        //             const err = await response.json();
+        //             alert('❌ Error: ' + err.error);
+        //         }
+        //     } catch (error) {
+        //         document.getElementById('loading').style.display = 'none';
+        //         alert('❌ Network error: ' + error.message);
+        //     }
+        // });
+
+        document.getElementById('generatorForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const mode = document.getElementById('mode').value;
+            console.log('Mode selected:', mode);
+
+            if (mode === 'update' && !uploadedFile) {
+                alert('❌ Please upload your existing project ZIP file first!');
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+
+            // Validate entities
+            for (const entity of entities) {
+                if (!entity.entity.trim()) {
+                    alert('❌ All entities must have a name!');
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                if (entity.fields.length === 0) {
+                    alert(`❌ Entity "${entity.entity}" must have at least one field!`);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                for (const field of entity.fields) {
+                    if (!field.name.trim()) {
+                        alert(`❌ All fields in "${entity.entity}" must have a name!`);
+                        document.getElementById('loading').style.display = 'none';
+                        return;
+                    }
+                }
+            }
+
+            const formData = new FormData();
+            formData.append('mode', mode);
+            formData.append('schemas', JSON.stringify(entities));
+            if (mode === 'update' && uploadedFile) {
+                console.log('Uploading file:', {
+                    name: uploadedFile.name,
+                    size: uploadedFile.size,
+                    type: uploadedFile.type,
+                    lastModified: uploadedFile.lastModified,
+                });
+                formData.append('projectFile', uploadedFile);
+            } else if (mode === 'update') {
+                console.error('No file selected for upload');
+                alert('❌ No file selected for update mode!');
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            const framework = document.getElementById('framework').value;
+            formData.append('framework', framework);
+
+            if (framework === 'both') {
+                formData.append('nodejsDbName', document.getElementById('nodejsDbName').value);
+                formData.append('nodejsConnectionString', document.getElementById('nodejsConnStr').value);
+                formData.append('nodejsUseAuth', document.getElementById('nodejsUseAuth').checked ? 'on' : 'off');
+                if (document.getElementById('nodejsUseAuth').checked) {
+                    formData.append('nodejsUsername', document.getElementById('nodejsUsername').value);
+                    formData.append('nodejsPassword', document.getElementById('nodejsPassword').value);
+                }
+                formData.append('dotnetDbName', document.getElementById('dotnetDbName').value);
+                formData.append('dotnetConnectionString', document.getElementById('dotnetConnStr').value);
+                formData.append('dotnetUseAuth', document.getElementById('dotnetUseAuth').checked ? 'on' : 'off');
+                if (document.getElementById('dotnetUseAuth').checked) {
+                    formData.append('dotnetUsername', document.getElementById('dotnetUsername').value);
+                    formData.append('dotnetPassword', document.getElementById('dotnetPassword').value);
+                }
+            } else {
+                const useAuth = document.getElementById('useAuth').checked;
+                const dbConfig = {
+                    dbName: document.getElementById('dbName').value,
+                    connectionString: document.getElementById('connStr').value,
+                    useAuth,
+                    ...(useAuth ? {
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value,
+                    } : {}),
+                };
+                formData.append('dbConfig', JSON.stringify(dbConfig));
+            }
+
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value instanceof File ? `${value.name} (${value.size} bytes, ${value.type})` : value}`);
+            }
+
+            try {
+                const response = await fetch(mode === 'update' ? '/update-project' : '/generate', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                document.getElementById('loading').style.display = 'none';
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `api-project-${framework}-${mode}-${Date.now()}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    alert(`✅ ZIP downloaded! Your project has been ${mode === 'update' ? 'updated' : 'generated'}.`);
+                } else {
+                    const err = await response.json();
+                    alert('❌ Error: ' + err.error);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('❌ Network error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "api-generator-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "archiver": "^7.0.1",
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.4.0",
+    "express-validator": "^7.2.0",
+    "fs-extra": "^11.3.1",
+    "helmet": "^7.1.0",
+    "multer": "^2.0.2",
+    "uuid": "^13.0.0"
+  }
+}
