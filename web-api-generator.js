@@ -206,6 +206,7 @@ app.post("/generate", textUpload.none(), async (req, res) => {
     // Parse schemas
     try {
       schemas = JSON.parse(payload.schemas);
+      console.log("Parsed schemas:", schemas);
     } catch (parseErr) {
       return res
         .status(400)
@@ -218,6 +219,7 @@ app.post("/generate", textUpload.none(), async (req, res) => {
         typeof payload.dbConfig === "string"
           ? JSON.parse(payload.dbConfig)
           : payload.dbConfig;
+      console.log("Parsed dbConfig:", dbConfig);
     } catch (parseErr) {
       return res
         .status(400)
@@ -243,6 +245,7 @@ app.post("/generate", textUpload.none(), async (req, res) => {
 
     // Create full payload with parsed schemas and dbConfig
     const fullPayload = { ...payload, schemas, dbConfig };
+    console.log("Full payload for generateAndZipProject:", fullPayload);
 
     await generateAndZipProject(fullPayload, res);
   } catch (error) {
@@ -622,6 +625,299 @@ async function updateNodeJsProject(sourcePath, targetPath, schemas, dbConfig) {
   console.log("✅ Node.js project updated successfully");
 }
 
+// async function updateNodejsServerFile(
+//   projectPath,
+//   newEntities,
+//   isBothMode = false
+// ) {
+//   const serverFilePath = path.join(projectPath, "server.js");
+
+//   if (!(await fsExtra.pathExists(serverFilePath))) {
+//     console.warn("server.js not found, skipping server update");
+//     return;
+//   }
+
+//   let serverContent = await fsExtra.readFile(serverFilePath, "utf8");
+
+//   for (const entity of newEntities) {
+//     const importLine = `const ${entity}Routes = require('./routes/${entity}');`;
+//     if (!serverContent.includes(importLine)) {
+//       const importRegex = /const \w+ = require\('\w+'\);/g;
+//       const matches = [...serverContent.matchAll(importRegex)];
+//       let insertIndex = 0;
+//       if (matches.length > 0) {
+//         const lastImport = matches[matches.length - 1];
+//         insertIndex = lastImport.index + lastImport[0].length;
+//       } else {
+//         insertIndex = serverContent.indexOf("\n") + 1;
+//       }
+//       serverContent =
+//         serverContent.slice(0, insertIndex) +
+//         "\n" +
+//         importLine +
+//         serverContent.slice(insertIndex);
+//       console.log(`Added import for ${entity}Routes`);
+//     }
+//   }
+
+//   for (const entity of newEntities) {
+//     const lowerEntity = entity.toLowerCase();
+//     const routeLine = `app.use('/api/${lowerEntity}s', ${entity}Routes);`;
+//     if (!serverContent.includes(routeLine)) {
+//       const routeRegex = /app\.use\('\/api\/\w+s', \w+Routes\);/g;
+//       const routeMatches = [...serverContent.matchAll(routeRegex)];
+//       let insertIndex = 0;
+//       if (routeMatches.length > 0) {
+//         const lastRoute = routeMatches[routeMatches.length - 1];
+//         insertIndex = lastRoute.index + lastRoute[0].length;
+//       } else {
+//         const healthCheckIndex = serverContent.indexOf("app.get('/',");
+//         if (healthCheckIndex !== -1) {
+//           insertIndex = healthCheckIndex;
+//         } else {
+//           insertIndex = serverContent.indexOf("app.listen(PORT");
+//         }
+//       }
+//       serverContent =
+//         serverContent.slice(0, insertIndex) +
+//         routeLine +
+//         "\n" +
+//         serverContent.slice(insertIndex);
+//       console.log(`Added route for /api/${lowerEntity}s`);
+//     }
+//   }
+
+//   const endpointsRegex = /endpoints: \[([^\]]*)\]/s;
+//   const totalApisRegex = /totalAPIs: \d+/;
+//   let allEndpoints = [];
+
+//   const endpointsMatch = serverContent.match(endpointsRegex);
+//   if (endpointsMatch) {
+//     const existingEndpoints = endpointsMatch[1];
+//     const endpointList = existingEndpoints
+//       .split(",")
+//       .map((ep) => ep.trim().replace(/'/g, ""))
+//       .filter((ep) => ep.startsWith("/api/") && ep.endsWith("s"));
+//     allEndpoints = [...endpointList];
+//   }
+
+//   for (const entity of newEntities) {
+//     const newEndpoint = `/api/${entity.toLowerCase()}s`;
+//     if (!allEndpoints.includes(newEndpoint)) {
+//       allEndpoints.push(newEndpoint);
+//     }
+//   }
+
+//   allEndpoints.sort();
+//   const endpointsStr = allEndpoints.map((ep) => `'${ep}'`).join(", ");
+//   serverContent = serverContent.replace(
+//     endpointsRegex,
+//     `endpoints: [${endpointsStr}]`
+//   );
+
+//   serverContent = serverContent.replace(
+//     totalApisRegex,
+//     `totalAPIs: ${allEndpoints.length}`
+//   );
+
+//   const consoleLogRegex =
+//     /console\.log\(`📋 Available endpoints \(\\\${[\s\S]*?(?=console\.log\('🔒)/s;
+//   const newConsoleLogs =
+//     `console.log(\`📋 Available endpoints (\${${allEndpoints.length} APIs):\`);\n  ` +
+//     allEndpoints
+//       .map(
+//         (endpoint) =>
+//           `console.log(\`  - http://localhost:\${PORT}${endpoint}\`);`
+//       )
+//       .join("\n  ") +
+//     `\n  console.log(\`  - http://localhost:\${PORT}/ (health check)\`);\n  `;
+
+//   serverContent = serverContent.replace(consoleLogRegex, newConsoleLogs);
+
+//   const healthCheckRegex = /res\.json\(\{([\s\S]*?)\}\);/;
+//   const healthCheckMatch = serverContent.match(healthCheckRegex);
+//   if (healthCheckMatch) {
+//     let healthCheckBody = healthCheckMatch[1];
+//     if (!healthCheckBody.includes("lastUpdate")) {
+//       healthCheckBody = healthCheckBody.replace(
+//         /version: '1\.0\.0',/,
+//         `version: '1.0.0',\n          lastUpdate: new Date().toISOString(),`
+//       );
+//       serverContent = serverContent.replace(
+//         healthCheckRegex,
+//         `res.json({${healthCheckBody}});`
+//       );
+//     }
+//   }
+
+//   if (!serverContent.includes("✨ APIs updated successfully!")) {
+//     const listenRegex = /console\.log\('🔒.*?\);/;
+//     serverContent = serverContent.replace(
+//       listenRegex,
+//       `$&\n      console.log("✨ APIs updated successfully!");`
+//     );
+//   }
+
+//   await fsExtra.outputFile(serverFilePath, serverContent);
+//   console.log("📝 server.js updated with new routes, endpoints, and totalAPIs");
+// }
+
+// async function updateNodejsServerFile(
+//   projectPath,
+//   newEntities,
+//   isBothMode = false
+// ) {
+//   const serverFilePath = path.join(projectPath, "server.js");
+
+//   if (!(await fsExtra.pathExists(serverFilePath))) {
+//     console.warn("server.js not found, creating new one with new entities");
+//     const dbConfig = { dbName: "multi_api_db1" }; // Fallback dbConfig, adjust as needed
+//     await fsExtra.outputFile(
+//       serverFilePath,
+//       generateNodeJSServer(newEntities, dbConfig, true)
+//     );
+//     console.log("✅ Created new server.js with new entities");
+//     return;
+//   }
+
+//   let serverContent = await fsExtra.readFile(serverFilePath, "utf8");
+//   console.log("📜 Original server.js content:", serverContent);
+
+//   // Add new imports
+//   for (const entity of newEntities) {
+//     const importLine = `const ${entity}Routes = require('./routes/${entity}');`;
+//     if (!serverContent.includes(importLine)) {
+//       // Find the last import or insert at the top
+//       const importInsertPoint = serverContent.indexOf("const app = express();");
+//       if (importInsertPoint !== -1) {
+//         serverContent =
+//           serverContent.slice(0, importInsertPoint) +
+//           importLine +
+//           "\n" +
+//           serverContent.slice(importInsertPoint);
+//         console.log(`✅ Added import for ${entity}Routes`);
+//       } else {
+//         console.warn(
+//           "⚠️ Could not find 'const app = express();', prepending import"
+//         );
+//         serverContent = importLine + "\n" + serverContent;
+//       }
+//     } else {
+//       console.log(`ℹ️ Import for ${entity}Routes already exists`);
+//     }
+//   }
+
+//   // Add new routes
+//   for (const entity of newEntities) {
+//     const lowerEntity = entity.toLowerCase();
+//     const routeLine = `app.use('/api/${lowerEntity}s', ${entity}Routes);`;
+//     if (!serverContent.includes(routeLine)) {
+//       // Find the position before the health check or app.listen
+//       let routeInsertPoint = serverContent.indexOf("app.get('/',");
+//       if (routeInsertPoint === -1) {
+//         routeInsertPoint = serverContent.indexOf("app.listen(PORT");
+//       }
+//       if (routeInsertPoint !== -1) {
+//         serverContent =
+//           serverContent.slice(0, routeInsertPoint) +
+//           routeLine +
+//           "\n" +
+//           serverContent.slice(routeInsertPoint);
+//         console.log(`✅ Added route for /api/${lowerEntity}s`);
+//       } else {
+//         console.warn("⚠️ Could not find insertion point for routes, appending");
+//         serverContent += "\n" + routeLine;
+//       }
+//     } else {
+//       console.log(`ℹ️ Route for /api/${lowerEntity}s already exists`);
+//     }
+//   }
+
+//   // Update endpoints array and totalAPIs
+//   let allEndpoints = [];
+//   const endpointsRegex = /endpoints: \[([^\]]*)\]/s;
+//   const endpointsMatch = serverContent.match(endpointsRegex);
+//   if (endpointsMatch) {
+//     const existingEndpoints = endpointsMatch[1];
+//     allEndpoints = existingEndpoints
+//       .split(",")
+//       .map((ep) => ep.trim().replace(/'/g, ""))
+//       .filter((ep) => ep.startsWith("/api/") && ep.endsWith("s"));
+//   }
+//   console.log("📋 Existing endpoints:", allEndpoints);
+
+//   for (const entity of newEntities) {
+//     const newEndpoint = `/api/${entity.toLowerCase()}s`;
+//     if (!allEndpoints.includes(newEndpoint)) {
+//       allEndpoints.push(newEndpoint);
+//       console.log(`✅ Added endpoint: ${newEndpoint}`);
+//     }
+//   }
+
+//   allEndpoints.sort();
+//   const endpointsStr = allEndpoints.map((ep) => `'${ep}'`).join(", ");
+//   serverContent = serverContent.replace(
+//     endpointsRegex,
+//     `endpoints: [${endpointsStr}]`
+//   );
+
+//   // Update totalAPIs
+//   const totalApisRegex = /totalAPIs: \d+/;
+//   serverContent = serverContent.replace(
+//     totalApisRegex,
+//     `totalAPIs: ${allEndpoints.length}`
+//   );
+//   console.log(`✅ Updated totalAPIs to ${allEndpoints.length}`);
+
+//   // Update console logs for endpoints
+//   const consoleLogRegex =
+//     /console\.log\(`📋 Available endpoints \(\\\${[\s\S]*?(?=console\.log\('🔒)/s;
+//   const newConsoleLogs =
+//     `console.log(\`📋 Available endpoints (\${${allEndpoints.length} APIs):\`);\n  ` +
+//     allEndpoints
+//       .map(
+//         (endpoint) =>
+//           `console.log(\`  - http://localhost:\${PORT}${endpoint}\`);`
+//       )
+//       .join("\n  ") +
+//     `\n  console.log(\`  - http://localhost:\${PORT}/ (health check)\`);\n  `;
+
+//   serverContent = serverContent.replace(consoleLogRegex, newConsoleLogs);
+//   console.log("✅ Updated console logs for endpoints");
+
+//   // Add lastUpdate if not present
+//   const healthCheckRegex = /res\.json\(\{([\s\S]*?)\}\);/;
+//   const healthCheckMatch = serverContent.match(healthCheckRegex);
+//   if (healthCheckMatch) {
+//     let healthCheckBody = healthCheckMatch[1];
+//     if (!healthCheckBody.includes("lastUpdate")) {
+//       healthCheckBody = healthCheckBody.replace(
+//         /version: '1\.0\.0',/,
+//         `version: '1.0.0',\n          lastUpdate: new Date().toISOString(),`
+//       );
+//       serverContent = serverContent.replace(
+//         healthCheckRegex,
+//         `res.json({${healthCheckBody}});`
+//       );
+//       console.log("✅ Added lastUpdate to health check");
+//     }
+//   }
+
+//   // Add update success message if not present
+//   if (!serverContent.includes("✨ APIs updated successfully!")) {
+//     const listenRegex = /console\.log\('🔒.*?\);/;
+//     serverContent = serverContent.replace(
+//       listenRegex,
+//       `$&\n      console.log("✨ APIs updated successfully!");`
+//     );
+//     console.log("✅ Added update success message");
+//   }
+
+//   await fsExtra.outputFile(serverFilePath, serverContent);
+//   console.log("📝 server.js updated with new routes, endpoints, and totalAPIs");
+//   console.log("📜 Updated server.js content:", serverContent);
+// }
+
 async function updateNodejsServerFile(
   projectPath,
   newEntities,
@@ -630,78 +926,85 @@ async function updateNodejsServerFile(
   const serverFilePath = path.join(projectPath, "server.js");
 
   if (!(await fsExtra.pathExists(serverFilePath))) {
-    console.warn("server.js not found, skipping server update");
+    console.warn("server.js not found, creating new one with new entities");
+    const dbConfig = { dbName: "multi_api_db1" }; // Fallback dbConfig, adjust as needed
+    await fsExtra.outputFile(
+      serverFilePath,
+      generateNodeJSServer(newEntities, dbConfig, true)
+    );
+    console.log("✅ Created new server.js with new entities");
     return;
   }
 
   let serverContent = await fsExtra.readFile(serverFilePath, "utf8");
+  console.log("📜 Original server.js content:", serverContent);
 
+  // Add new imports
   for (const entity of newEntities) {
     const importLine = `const ${entity}Routes = require('./routes/${entity}');`;
     if (!serverContent.includes(importLine)) {
-      const importRegex = /const \w+ = require\('\w+'\);/g;
-      const matches = [...serverContent.matchAll(importRegex)];
-      let insertIndex = 0;
-      if (matches.length > 0) {
-        const lastImport = matches[matches.length - 1];
-        insertIndex = lastImport.index + lastImport[0].length;
+      const importInsertPoint = serverContent.indexOf("const app = express();");
+      if (importInsertPoint !== -1) {
+        serverContent =
+          serverContent.slice(0, importInsertPoint) +
+          importLine +
+          "\n" +
+          serverContent.slice(importInsertPoint);
+        console.log(`✅ Added import for ${entity}Routes`);
       } else {
-        insertIndex = serverContent.indexOf("\n") + 1;
+        console.warn(
+          "⚠️ Could not find 'const app = express();', prepending import"
+        );
+        serverContent = importLine + "\n" + serverContent;
       }
-      serverContent =
-        serverContent.slice(0, insertIndex) +
-        "\n" +
-        importLine +
-        serverContent.slice(insertIndex);
-      console.log(`Added import for ${entity}Routes`);
+    } else {
+      console.log(`ℹ️ Import for ${entity}Routes already exists`);
     }
   }
 
+  // Add new routes
   for (const entity of newEntities) {
     const lowerEntity = entity.toLowerCase();
     const routeLine = `app.use('/api/${lowerEntity}s', ${entity}Routes);`;
     if (!serverContent.includes(routeLine)) {
-      const routeRegex = /app\.use\('\/api\/\w+s', \w+Routes\);/g;
-      const routeMatches = [...serverContent.matchAll(routeRegex)];
-      let insertIndex = 0;
-      if (routeMatches.length > 0) {
-        const lastRoute = routeMatches[routeMatches.length - 1];
-        insertIndex = lastRoute.index + lastRoute[0].length;
-      } else {
-        const healthCheckIndex = serverContent.indexOf("app.get('/',");
-        if (healthCheckIndex !== -1) {
-          insertIndex = healthCheckIndex;
-        } else {
-          insertIndex = serverContent.indexOf("app.listen(PORT");
-        }
+      let routeInsertPoint = serverContent.indexOf("app.get('/',");
+      if (routeInsertPoint === -1) {
+        routeInsertPoint = serverContent.indexOf("app.listen(PORT");
       }
-      serverContent =
-        serverContent.slice(0, insertIndex) +
-        routeLine +
-        "\n" +
-        serverContent.slice(insertIndex);
-      console.log(`Added route for /api/${lowerEntity}s`);
+      if (routeInsertPoint !== -1) {
+        serverContent =
+          serverContent.slice(0, routeInsertPoint) +
+          routeLine +
+          "\n" +
+          serverContent.slice(routeInsertPoint);
+        console.log(`✅ Added route for /api/${lowerEntity}s`);
+      } else {
+        console.warn("⚠️ Could not find insertion point for routes, appending");
+        serverContent += "\n" + routeLine;
+      }
+    } else {
+      console.log(`ℹ️ Route for /api/${lowerEntity}s already exists`);
     }
   }
 
-  const endpointsRegex = /endpoints: \[([^\]]*)\]/s;
-  const totalApisRegex = /totalAPIs: \d+/;
+  // Update endpoints array and totalAPIs
   let allEndpoints = [];
-
+  const endpointsRegex = /endpoints: \[([^\]]*)\]/s;
   const endpointsMatch = serverContent.match(endpointsRegex);
   if (endpointsMatch) {
     const existingEndpoints = endpointsMatch[1];
-    const endpointList = existingEndpoints
+    allEndpoints = existingEndpoints
       .split(",")
       .map((ep) => ep.trim().replace(/'/g, ""))
-      .filter((ep) => ep.startsWith("/api/") && ep.endsWith("s"));
-    allEndpoints = [...endpointList];
+      .filter((ep) => ep && ep.startsWith("/api/") && ep.endsWith("s"));
   }
+  console.log("📋 Existing endpoints:", allEndpoints);
 
   for (const entity of newEntities) {
     const newEndpoint = `/api/${entity.toLowerCase()}s`;
     if (!allEndpoints.includes(newEndpoint)) {
       allEndpoints.push(newEndpoint);
+      console.log(`✅ Added endpoint: ${newEndpoint}`);
     }
   }
 
@@ -712,11 +1015,15 @@ async function updateNodejsServerFile(
     `endpoints: [${endpointsStr}]`
   );
 
+  // Update totalAPIs
+  const totalApisRegex = /totalAPIs: \d+/;
   serverContent = serverContent.replace(
     totalApisRegex,
     `totalAPIs: ${allEndpoints.length}`
   );
+  console.log(`✅ Updated totalAPIs to ${allEndpoints.length}`);
 
+  // Update console logs for endpoints
   const consoleLogRegex =
     /console\.log\(`📋 Available endpoints \(\\\${[\s\S]*?(?=console\.log\('🔒)/s;
   const newConsoleLogs =
@@ -730,7 +1037,9 @@ async function updateNodejsServerFile(
     `\n  console.log(\`  - http://localhost:\${PORT}/ (health check)\`);\n  `;
 
   serverContent = serverContent.replace(consoleLogRegex, newConsoleLogs);
+  console.log("✅ Updated console logs for endpoints");
 
+  // Add lastUpdate if not present
   const healthCheckRegex = /res\.json\(\{([\s\S]*?)\}\);/;
   const healthCheckMatch = serverContent.match(healthCheckRegex);
   if (healthCheckMatch) {
@@ -744,21 +1053,24 @@ async function updateNodejsServerFile(
         healthCheckRegex,
         `res.json({${healthCheckBody}});`
       );
+      console.log("✅ Added lastUpdate to health check");
     }
   }
 
+  // Add update success message if not present
   if (!serverContent.includes("✨ APIs updated successfully!")) {
     const listenRegex = /console\.log\('🔒.*?\);/;
     serverContent = serverContent.replace(
       listenRegex,
       `$&\n      console.log("✨ APIs updated successfully!");`
     );
+    console.log("✅ Added update success message");
   }
 
   await fsExtra.outputFile(serverFilePath, serverContent);
   console.log("📝 server.js updated with new routes, endpoints, and totalAPIs");
+  console.log("📜 Updated server.js content:", serverContent);
 }
-
 async function updateDotNetProgram(projectPath, entities, dbConfig) {
   const programPath = path.join(projectPath, "Program.cs");
   if (!(await fsExtra.pathExists(programPath))) {
@@ -1368,6 +1680,131 @@ function parseNaturalLanguage(description) {
   return schemas;
 }
 
+// function generateNodeJSServer(
+//   entities,
+//   dbConfig,
+//   isUpdate = false,
+//   framework = "nodejs"
+// ) {
+//   const imports = entities
+//     .map((entity) => `const ${entity}Routes = require('./routes/${entity}');`)
+//     .join("\n");
+
+//   const routes = entities
+//     .map((entity) => {
+//       const lowerEntity = entity.toLowerCase();
+//       return `app.use('/api/${lowerEntity}s', ${entity}Routes);`;
+//     })
+//     .join("\n");
+
+//   const endpoints = entities
+//     .map((entity) => `'${entity.toLowerCase()}s'`)
+//     .sort()
+//     .map((endpoint) => `'${endpoint}'`)
+//     .join(", ");
+
+//   return `// server.js
+// const express = require('express');
+// const cors = require('cors');
+// const morgan = require('morgan');
+// const helmet = require('helmet');
+// const rateLimit = require('express-rate-limit');
+// const { body, validationResult } = require('express-validator');
+// const net = require('net');
+// const connectDB = require('./config/database');
+// ${imports}
+
+// const app = express();
+
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 100,
+//   message: { error: 'Too many requests from this IP, please try again later.' }
+// });
+// app.use(limiter);
+
+// function getAvailablePort(startPort) {
+//   return new Promise((resolve, reject) => {
+//     const server = net.createServer();
+//     server.unref();
+//     server.on('error', (err) => {
+//       if (err.code === 'EADDRINUSE') {
+//         resolve(getAvailablePort(startPort + 1));
+//       } else {
+//         reject(err);
+//       }
+//     });
+//     server.listen(startPort, () => {
+//       server.close(() => {
+//         resolve(startPort);
+//       });
+//     });
+//   });
+// }
+
+// (async () => {
+//   try {
+//     const basePort = process.env.PORT || 3000;
+//     const PORT = await getAvailablePort(basePort);
+//     await connectDB();
+
+//     app.use(helmet());
+//     app.use(cors());
+//     app.use(morgan('combined'));
+//     app.use(express.json({ limit: '10mb' }));
+//     app.use(express.urlencoded({ extended: true }));
+//     app.disable('x-powered-by');
+
+//     ${routes}
+
+//     app.get('/', async (req, res) => {
+//       try {
+//         const mongoose = require('mongoose');
+//         const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+//         res.json({
+//           message: 'Node.js Multi API Server with MongoDB is running! (Secured with Helmet & Rate Limiting)',
+//           database: { status: dbStatus, name: '${dbConfig.dbName}' },
+//           endpoints: [${endpoints}],
+//           totalAPIs: ${entities.length},
+//           version: '1.0.0',
+//           ${isUpdate ? "lastUpdate: new Date().toISOString()," : ""}
+//         });
+//       } catch (error) {
+//         res.status(500).json({ error: 'Server health check failed' });
+//       }
+//     });
+
+//     app.use('*', (req, res) => {
+//       res.status(404).json({ error: 'Route not found' });
+//     });
+
+//     app.use((error, req, res, next) => {
+//       console.error('Server Error:', error);
+//       res.status(500).json({ error: 'Internal server error' });
+//     });
+
+//     app.listen(PORT, () => {
+//       console.log(\`🚀 Server running on port \${PORT}\`);
+//       console.log(\`📋 Available endpoints \`);
+//       console.log(\`(\${${entities.length}} APIs):\`);
+//       ${entities
+//         .map(
+//           (entity) =>
+//             `console.log(\`  - http://localhost:\${PORT}/api/${entity.toLowerCase()}s\`);`
+//         )
+//         .join("\n  ")}
+//       console.log(\`  - http://localhost:\${PORT}/ (health check)\`);
+//       console.log('🔒 Security: Helmet, Rate Limiting, and Input Validation enabled');
+//       ${isUpdate ? 'console.log("✨ APIs updated successfully!");' : ""}
+//     });
+//   } catch (err) {
+//     console.error('Failed to start server:', err);
+//     process.exit(1);
+//   }
+// })();
+// `;
+// }
+
 function generateNodeJSServer(
   entities,
   dbConfig,
@@ -1388,7 +1825,6 @@ function generateNodeJSServer(
   const endpoints = entities
     .map((entity) => `'${entity.toLowerCase()}s'`)
     .sort()
-    .map((endpoint) => `'${endpoint}'`)
     .join(", ");
 
   return `// server.js
@@ -1473,7 +1909,7 @@ function getAvailablePort(startPort) {
 
     app.listen(PORT, () => {
       console.log(\`🚀 Server running on port \${PORT}\`);
-      console.log(\`📋 Available endpoints (\${${entities.length} APIs):\`);
+      console.log(\`📋 Available endpoints \`);
       ${entities
         .map(
           (entity) =>
@@ -2197,9 +2633,146 @@ curl http://localhost:5000/api/users
 `;
 }
 
+// async function generateAndZipProject(payload, res) {
+//   const { framework, schemas, dbConfig, nodejsDbConfig, dotnetDbConfig } =
+//     payload;
+//   console.log("Payload in generateAndZipProject:", payload);
+//   if (
+//     framework === "dotnet" &&
+//     (!dbConfig || !dbConfig.connectionString || !dbConfig.dbName)
+//   ) {
+//     throw new Error(
+//       "Invalid dbConfig for .NET: Missing connectionString or dbName"
+//     );
+//   }
+//   if (!Array.isArray(schemas) || schemas.length === 0) {
+//     throw new Error("Invalid schemas: Must be a non-empty array");
+//   }
+
+//   const tempDir = path.join(__dirname, `temp-generate-${uuidv4()}`);
+//   const outputDir = path.join(tempDir, "project");
+//   const outputZipPath = path.join(
+//     tempDir,
+//     `generated-project-${framework}-${Date.now()}.zip`
+//   );
+
+//   try {
+//     await fsExtra.ensureDir(tempDir);
+//     await fsExtra.ensureDir(outputDir);
+
+//     const entities = schemas.map((s) => s.entity);
+
+//     if (framework === "both") {
+//       const nodejsPath = path.join(outputDir, "nodejs");
+//       const dotnetPath = path.join(outputDir, "dotnet");
+//       await fsExtra.ensureDir(nodejsPath);
+//       await fsExtra.ensureDir(dotnetPath);
+
+//       const nodeStructure = generateNodeJSAPI(
+//         entities,
+//         nodejsDbConfig,
+//         false,
+//         "both"
+//       );
+//       for (const [filePath, content] of Object.entries(nodeStructure)) {
+//         if (typeof content === "object") {
+//           for (const [subPath, subContent] of Object.entries(content)) {
+//             await fsExtra.outputFile(
+//               path.join(nodejsPath, filePath, subPath),
+//               subContent
+//             );
+//           }
+//         } else {
+//           await fsExtra.outputFile(path.join(nodejsPath, filePath), content);
+//         }
+//       }
+
+//       const dotnetStructure = generateDotNetAPI(
+//         entities,
+//         dotnetDbConfig,
+//         schemas, // Pass schemas explicitly
+//         false,
+//         "both"
+//       );
+//       for (const [filePath, content] of Object.entries(dotnetStructure)) {
+//         if (typeof content === "object") {
+//           for (const [subPath, subContent] of Object.entries(content)) {
+//             await fsExtra.outputFile(
+//               path.join(dotnetPath, filePath, subPath),
+//               subContent
+//             );
+//           }
+//         } else {
+//           await fsExtra.outputFile(path.join(dotnetPath, filePath), content);
+//         }
+//       }
+//     } else if (framework === "nodejs") {
+//       const structure = generateNodeJSAPI(entities, dbConfig);
+//       for (const [filePath, content] of Object.entries(structure)) {
+//         if (typeof content === "object") {
+//           for (const [subPath, subContent] of Object.entries(content)) {
+//             await fsExtra.outputFile(
+//               path.join(outputDir, filePath, subPath),
+//               subContent
+//             );
+//           }
+//         } else {
+//           await fsExtra.outputFile(path.join(outputDir, filePath), content);
+//         }
+//       }
+//     } else if (framework === "dotnet") {
+//       const structure = generateDotNetAPI(entities, dbConfig, schemas); // Pass schemas explicitly
+//       for (const [filePath, content] of Object.entries(structure)) {
+//         if (typeof content === "object") {
+//           for (const [subPath, subContent] of Object.entries(content)) {
+//             await fsExtra.outputFile(
+//               path.join(outputDir, filePath, subPath),
+//               subContent
+//             );
+//           }
+//         } else {
+//           await fsExtra.outputFile(path.join(outputDir, filePath), content);
+//         }
+//       }
+//     }
+
+//     const output = fsExtra.createWriteStream(outputZipPath);
+//     const archive = archiver("zip", { zlib: { level: 9 } });
+
+//     archive.on("error", (err) => {
+//       throw new Error("Failed to create ZIP file");
+//     });
+
+//     archive.pipe(output);
+//     archive.directory(outputDir, false);
+
+//     await new Promise((resolve, reject) => {
+//       output.on("close", resolve);
+//       output.on("error", reject);
+//       archive.finalize();
+//     });
+
+//     res.download(outputZipPath, path.basename(outputZipPath), async (err) => {
+//       if (err) {
+//         res.status(500).json({ error: "Failed to send generated project" });
+//       }
+//       await fsExtra.remove(tempDir);
+//     });
+//   } catch (error) {
+//     console.error("Generation error:", error);
+//     await fsExtra.remove(tempDir);
+//     res.status(500).json({ error: `Generation failed: ${error.message}` });
+//   }
+// }
+
 async function generateAndZipProject(payload, res) {
   const { framework, schemas, dbConfig, nodejsDbConfig, dotnetDbConfig } =
     payload;
+  console.log("Payload in generateAndZipProject:", {
+    framework,
+    schemas,
+    dbConfig,
+  });
   console.log("Payload in generateAndZipProject:", payload);
   if (
     framework === "dotnet" &&
@@ -2225,16 +2798,18 @@ async function generateAndZipProject(payload, res) {
     await fsExtra.ensureDir(outputDir);
 
     const entities = schemas.map((s) => s.entity);
+    console.log("Entities extracted:", entities);
 
     if (framework === "both") {
       const nodejsPath = path.join(outputDir, "nodejs");
       const dotnetPath = path.join(outputDir, "dotnet");
       await fsExtra.ensureDir(nodejsPath);
       await fsExtra.ensureDir(dotnetPath);
-
+      console.log("Generating Node.js API with schemas:", schemas);
       const nodeStructure = generateNodeJSAPI(
         entities,
         nodejsDbConfig,
+        schemas, // Pass schemas here
         false,
         "both"
       );
@@ -2250,11 +2825,11 @@ async function generateAndZipProject(payload, res) {
           await fsExtra.outputFile(path.join(nodejsPath, filePath), content);
         }
       }
-
+      console.log("Generating .NET API with schemas:", schemas);
       const dotnetStructure = generateDotNetAPI(
         entities,
         dotnetDbConfig,
-        schemas, // Pass schemas explicitly
+        schemas,
         false,
         "both"
       );
@@ -2271,7 +2846,8 @@ async function generateAndZipProject(payload, res) {
         }
       }
     } else if (framework === "nodejs") {
-      const structure = generateNodeJSAPI(entities, dbConfig);
+      console.log("Generating Node.js API with schemas:", schemas);
+      const structure = generateNodeJSAPI(entities, dbConfig, schemas); // Add schemas here
       for (const [filePath, content] of Object.entries(structure)) {
         if (typeof content === "object") {
           for (const [subPath, subContent] of Object.entries(content)) {
@@ -2285,7 +2861,7 @@ async function generateAndZipProject(payload, res) {
         }
       }
     } else if (framework === "dotnet") {
-      const structure = generateDotNetAPI(entities, dbConfig, schemas); // Pass schemas explicitly
+      const structure = generateDotNetAPI(entities, dbConfig, schemas);
       for (const [filePath, content] of Object.entries(structure)) {
         if (typeof content === "object") {
           for (const [subPath, subContent] of Object.entries(content)) {
@@ -2337,6 +2913,15 @@ function generateNodeJSAPI(
   isUpdate = false,
   framework = "nodejs"
 ) {
+  console.log(
+    "In generateNodeJSAPI - entities:",
+    entities,
+    "schemas:",
+    schemas
+  ); // Add logging
+  if (!schemas || !Array.isArray(schemas)) {
+    throw new Error("Schemas parameter is missing or not an array");
+  }
   const structure = {
     "server.js": generateNodeJSServer(entities, dbConfig, isUpdate, framework),
     "config/database.js": generateNodeJSConfig(dbConfig),
